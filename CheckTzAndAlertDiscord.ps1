@@ -196,31 +196,61 @@ function GetTzInfo {
 
 function NotifyDiscord {
     param (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)][string]$Message
+        [ValidateSet("Current", "Next")]
+        [string]$Prefix,
+        [string[]]$Zones,
+        [string[]]$Immunities,
+        [string[]]$SuperUniques
     )
+
+    $message = CreateTzMessage -Prefix $Prefix -Zones $Zones -Immunities $Immunities -SuperUniques $SuperUniques
+
     $webhook = "https://discord.com/api/webhooks/"
-    $body = @{ 'content' = $Message } | ConvertTo-Json -Compress
+    $body = @{ 'content' = $message } | ConvertTo-Json -Compress
     Invoke-RestMethod -Uri $webhook -Method Post -Body $body -ContentType 'application/json'
 }
 
-function FormatFilteredTzMessage {
+function GetFilteredZoneNames {
     param (
         [string[]]$Zones,
-        [string[]]$Immunities,
-        [string[]]$SuperUniques,
-        [switch]$IgnoreFilteredZones
+        [switch]$IgnoreFilter
     )
 
     $alertZones = @()
     foreach ($zone in $Zones) {
-        if ($d2rAlertZoneIds -contains $zone -or $IgnoreFilteredZones) {
+        if ($d2rAlertZoneIds -contains $zone -or $IgnoreFilter) {
             $alertZones += $d2rZoneIds[$zone][1]
         }
     }
     if ($alertZones) {
-        return "  $($alertZones -join "`n  ")`n`nImmunities: $($Immunities -join ", ")`n`nSuperuniques: $($SuperUniques -join ", ")`n"
+        return $alertZones
     }
-    return ""
+    return $null
+}
+
+function CreateTzMessage {
+    param (
+        [ValidateSet("Current", "Next")]
+        [string]$Prefix,
+        [string[]]$Zones,
+        [string[]]$Immunities,
+        [string[]]$SuperUniques
+    )
+
+    if (-not $Zones) {
+        return ""
+    }
+
+    $prefixText = if ($Prefix -eq "Current") { "Current Terror Zones:" } else { "Next Terror Zones:" }
+    return @"
+$prefixText
+  $($Zones -join "`n  ")
+
+Immunities: $($Immunities -join ", ")
+
+Superuniques: $($SuperUniques -join ", ")
+
+"@
 }
 
 if ($RunOnce) { Start-Transcript -Path "$PSScriptRoot\TzAlertLog.txt" -Force }
@@ -228,18 +258,18 @@ if ($RunOnce) { Start-Transcript -Path "$PSScriptRoot\TzAlertLog.txt" -Force }
 if ($DumpInfo) {
     $tzInfo = GetTzInfo
     $tzInfo
-    $currentMessage = FormatFilteredTzMessage -Zones $tzInfo.current -Immunities $tzInfo.current_immunities -SuperUniques $tzInfo.current_superuniques -IgnoreFilteredZones
-    $tzCurrentMessage = "Current Terror Zones:`n$currentMessage"
+    $zones = GetFilteredZoneNames -Zones $tzInfo.current -IgnoreFilter
+    $tzCurrentMessage = CreateTzMessage -Prefix Current -Zones $zones -Immunities $tzInfo.current_immunities -SuperUniques $tzInfo.current_superuniques
 
-    $nextMessage = FormatFilteredTzMessage -Zones $tzInfo.next -Immunities $tzInfo.next_immunities -SuperUniques $tzInfo.next_superuniques -IgnoreFilteredZones
-    $tzNextMessage = "Next Terror Zones:`n$nextMessage"
+    $nextZones = GetFilteredZoneNames -Zones $tzInfo.next -IgnoreFilter
+    $tzNextMessage = CreateTzMessage -Prefix Next -Zones $nextZones -Immunities $tzInfo.next_immunities -SuperUniques $tzInfo.next_superuniques
+
+    Write-Host $tzCurrentMessage -ForegroundColor DarkRed
+    Write-Host $tzNextMessage -ForegroundColor Green
+
     if ($SendToDiscord) {
-        NotifyDiscord -Message $tzCurrentMessage
-        NotifyDiscord -Message $tzNextMessage
-    }
-    else {
-        Write-Host $tzCurrentMessage -ForegroundColor DarkRed
-        Write-Host $tzNextMessage -ForegroundColor Green
+        NotifyDiscord -Prefix Current -Zones $zones -Immunities $tzInfo.current_immunities -SuperUniques $tzInfo.current_superuniques
+        NotifyDiscord -Prefix Next -Zones $nextZones -Immunities $tzInfo.next_immunities -SuperUniques $tzInfo.next_superuniques
     }
     return
 }
@@ -249,26 +279,26 @@ do {
     $tzInfo = GetTzInfo
 
     if ($now.Minute -le 01 -or ($now.Minute -ge 30 -and $now.Minute -le 31)) {
-        $alertMessage = FormatFilteredTzMessage -Zones $tzInfo.current -Immunities $tzInfo.current_immunities -SuperUniques $tzInfo.current_superuniques
-        if ($alertMessage) {
-            $tzMessage = "Current Terror Zone:`n$alertMessage"
+        $zones = GetFilteredZoneNames -Zones $tzInfo.current
+        if ($zones) {
             if ($SendToDiscord) {
-                NotifyDiscord -Message $tzMessage
+                NotifyDiscord -Prefix Current -Zones $zones -Immunities $tzInfo.current_immunities -SuperUniques $tzInfo.current_superuniques
             }
             else {
-                Write-Host $tzMessage -ForegroundColor DarkRed
+                $tzCurrentMessage = CreateTzMessage -Prefix Current -Zones $zones -Immunities $tzInfo.current_immunities -SuperUniques $tzInfo.current_superuniques
+                Write-Host $tzCurrentMessage -ForegroundColor DarkRed
             }
         }
     }
     else {
-        $alertMessage = FormatFilteredTzMessage -Zones $tzInfo.next -Immunities $tzInfo.next_immunities -SuperUniques $tzInfo.next_superuniques
-        if ($alertMessage) {
-            $tzMessage = "Next Terror Zone:`n$alertMessage"
+        $zones = GetFilteredZoneNames -Zones $tzInfo.next
+        if ($zones) {
             if ($SendToDiscord) {
-                NotifyDiscord -Message $tzMessage
+                NotifyDiscord -Prefix Next -Zones $zones -Immunities $tzInfo.next_immunities -SuperUniques $tzInfo.next_superuniques
             }
             else {
-                Write-Host $tzMessage -ForegroundColor Green
+                $tzNextMessage = CreateTzMessage -Prefix Next -Zones $zones -Immunities $tzInfo.next_immunities -SuperUniques $tzInfo.next_superuniques
+                Write-Host $tzNextMessage -ForegroundColor Green
             }
         }
     }
