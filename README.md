@@ -6,7 +6,7 @@ PowerShell script that polls the **d2emu** Terror Zone API and optionally posts 
 
 - Maintains a lookup table of Diablo II: Resurrected zone IDs (`$d2rZoneIds`).
 - Defines an “alert list” of zone IDs you care about (`$d2rAlertZoneIds`).
-- On a schedule (minute `00`, `05`, `30`, `35` of each hour), calls the d2emu API for terror zone info.
+- On a schedule (minute `01`, `05`, `31`, `35` of each hour), calls the d2emu API for terror zone info.
 - If any **current** __or__ **next** terror zone matches your alert list, it prints a message or (with `-SendToDiscord`) sends it to Discord.
 - With `-DumpInfo`, it prints/sends the **current** terror zone info ignoring the `$d2rAlertZoneIds` filter.
 
@@ -96,13 +96,13 @@ Examples:
 
 ## Scheduling
 
-The script calculates the next poll time via `GetNextQueryTime` (currently `:00`, `:05`, `:30`, and `:35` each hour).
+The script calculates the next poll time via `GetNextQueryTime` (currently `:01`, `:05`, `:31`, and `:35` each hour).
 
 Examples:
 
-- Linux `cron` (every hour 8–22 at minute 0, 5, 30, 35):
+- Linux `cron` (every hour 8–22 at minute 01, 05, 31, 35):
   ```
-  00,05,30,35 8-22 * * * pwsh -File /home/<user>/scripts/CheckTzAndAlertDiscord.ps1 -RunOnce -SendToDiscord
+  01,05,31,35 8-22 * * * pwsh -File /home/<user>/scripts/CheckTzAndAlertDiscord.ps1 -RunOnce -SendToDiscord
   ```
 
 - Windows: use **Task Scheduler** to run `pwsh.exe` with arguments like:

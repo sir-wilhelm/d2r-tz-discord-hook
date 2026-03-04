@@ -1,6 +1,6 @@
 #crontab -e
 #run At minute 0, 5, 30, and 35 past every hour from 8 through 22
-#00,05,30,35 8-22 * * * pwsh -File /home/<username>/scripts/CheckTzAndAlertDiscord.ps1 -SendToDiscord -RunOnce
+#01,05,31,35 8-22 * * * pwsh -File /home/<username>/scripts/CheckTzAndAlertDiscord.ps1 -SendToDiscord -RunOnce
 
 param(
     [switch]$DumpInfo,
@@ -173,14 +173,16 @@ $d2rAlertZoneIds = @(
 function GetNextQueryTime {
     $now = Get-Date
     $hourStart = $now.Date.AddHours($now.Hour)
+    $t01 = $hourStart.AddMinutes(1)
     $t05 = $hourStart.AddMinutes(5)
-    $t30 = $hourStart.AddMinutes(30)
+    $t31 = $hourStart.AddMinutes(31)
     $t35 = $hourStart.AddMinutes(35)
 
+    if ($now -lt $t01) { return $t01 }
     if ($now -lt $t05) { return $t05 }
-    if ($now -lt $t30) { return $t30 }
+    if ($now -lt $t31) { return $t31 }
     if ($now -lt $t35) { return $t35 }
-    return $hourStart.AddHours(1)
+    return $t01.AddHours(1)
 }
 
 function GetTzInfo {
