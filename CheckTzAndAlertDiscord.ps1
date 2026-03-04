@@ -223,6 +223,8 @@ function FormatFilteredTzMessage {
     return ""
 }
 
+if ($RunOnce) { Start-Transcript -Path "$PSScriptRoot\TzAlertLog.txt" -Force }
+
 if ($DumpInfo) {
     $tzInfo = GetTzInfo
     $tzInfo
@@ -236,8 +238,8 @@ if ($DumpInfo) {
         NotifyDiscord -Message $tzNextMessage
     }
     else {
-        Write-Host $tzCurrentMessage -ForegroundColor Green
-        Write-Host $tzNextMessage -ForegroundColor DarkRed
+        Write-Host $tzCurrentMessage -ForegroundColor DarkRed
+        Write-Host $tzNextMessage -ForegroundColor Green
     }
     return
 }
@@ -246,7 +248,7 @@ do {
     $now = Get-Date
     $tzInfo = GetTzInfo
 
-    if ($now.Minute -eq 0 -or $now.Minute -eq 30) {
+    if ($now.Minute -le 01 -or ($now.Minute -ge 30 -and $now.Minute -le 31)) {
         $alertMessage = FormatFilteredTzMessage -Zones $tzInfo.current -Immunities $tzInfo.current_immunities -SuperUniques $tzInfo.current_superuniques
         if ($alertMessage) {
             $tzMessage = "Current Terror Zone:`n$alertMessage"
@@ -254,7 +256,7 @@ do {
                 NotifyDiscord -Message $tzMessage
             }
             else {
-                Write-Host $tzMessage
+                Write-Host $tzMessage -ForegroundColor DarkRed
             }
         }
     }
@@ -266,7 +268,7 @@ do {
                 NotifyDiscord -Message $tzMessage
             }
             else {
-                Write-Host $tzMessage
+                Write-Host $tzMessage -ForegroundColor Green
             }
         }
     }
@@ -274,3 +276,5 @@ do {
     if ($RunOnce) { break }
     Start-Sleep -Seconds ((GetNextQueryTime) - (Get-Date)).TotalSeconds
 } while ($true)
+
+if ($RunOnce) { Stop-Transcript }
