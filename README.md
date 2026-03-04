@@ -4,7 +4,6 @@ PowerShell script that polls the **d2emu** Terror Zone API and optionally posts 
 
 ## What it does
 
-- Maintains a lookup table of Diablo II: Resurrected zone IDs (`$d2rZoneIds`).
 - Defines an “alert list” of zone IDs you care about (`$d2rAlertZoneIds`).
 - On a schedule (minute `01`, `05`, `31`, `35` of each hour), calls the d2emu API for terror zone info.
 - If any **current** __or__ **next** terror zone matches your alert list, it prints a message or (with `-SendToDiscord`) sends it to Discord.
@@ -12,7 +11,7 @@ PowerShell script that polls the **d2emu** Terror Zone API and optionally posts 
 
 ## Configure the zones you care about
 
-Edit the `$d2rAlertZoneIds` array in `CheckTzAndAlertDiscord.ps1` ex for keys/act bosses:
+Edit the `$d2rAlertZoneIds` array in `CheckTzAndAlertDiscord.ps1`. Ex for keys/act bosses:
 
 ```powershell
 $d2rAlertZoneIds = @(
