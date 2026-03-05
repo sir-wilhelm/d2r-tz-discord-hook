@@ -29,30 +29,35 @@ $d2rAlertZoneIds = @(
 - The numeric IDs come from the `$d2rZoneIds` mapping near the top of the script.
 - Keep this list to integers only.
 
-## Configure d2emu API access (`x-emu-*` headers)
+## Configure secrets in `tz-bot.env`
 
-`GetTzInfo` currently uses two HTTP headers:
+The script reads required secrets from `tz-bot.env` placed next to `CheckTzAndAlertDiscord.ps1`.
 
-- `x-emu-username`
-- `x-emu-token`
+1. Rename `tz-bot.env.example` to `tz-bot.env`.
+2. Fill in these required values in JSON:
 
-You must request API access from **d2emu**  to obtain valid values:
-* Join their discord https://www.d2emu.com/about
-* Then go to [#request-token](https://discord.com/channels/1083777671172980826/1277801738103160912) and create a ticket asking for access.
-
-## Configure the Discord webhook
-
-`NotifyDiscord` posts to a Discord webhook URL like:
-
-```
-https://discord.com/api/webhooks/<id>/<token>
+```json
+{
+  "X_EMU_USERNAME": "<your d2emu username>",
+  "X_EMU_TOKEN": "<your d2emu token>",
+  "DISCORD_WEBHOOK_URL": "https://discord.com/api/webhooks/<id>/<token>"
+}
 ```
 
-To create one:
+If any required key is missing, the script fails and prints what value is missing.
+
+### Getting d2emu API credentials
+
+You must request API access from **d2emu**:
+1. Join their Discord: https://www.d2emu.com/about
+2. Then open [#request-token](https://discord.com/channels/1083777671172980826/1277801738103160912) and create a ticket.
+3. Copy the username/token into your `tz-bot.env` file.
+
+### Creating a Discord webhook
 
 1. In Discord, open your server and choose the target channel.
 2. Channel Settings → Integrations → Webhooks → “New Webhook”.
-3. Copy the webhook URL and replace the `$webhook = "..."` value in `NotifyDiscord`.
+3. Copy the webhook URL into `DISCORD_WEBHOOK_URL` in `tz-bot.env`.
 
 ## Usage
 

@@ -8,6 +8,58 @@ param(
     [switch]$RunOnce
 )
 
+function Import-JsonConfigFile {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    if (-not (Test-Path -Path $Path)) {
+        throw "Missing config file at '$Path'. Copy tz-bot.env.example to tz-bot.env and set required values."
+    }
+
+    try {
+        $config = Get-Content -Path $Path -Raw | ConvertFrom-Json
+    }
+    catch {
+        throw "Invalid JSON in '$Path'. Ensure tz-bot.env contains a valid JSON object."
+    }
+
+    if ($null -eq $config) {
+        throw "Config file '$Path' is empty. Add required keys to the JSON object."
+    }
+
+    return $config
+}
+
+function Assert-RequiredConfig {
+    param(
+        [Parameter(Mandatory = $true)]
+        [psobject]$Config,
+        [Parameter(Mandatory = $true)]
+        [string[]]$Names
+    )
+
+    $missing = @()
+    foreach ($name in $Names) {
+        $value = $Config.$name
+        if ([string]::IsNullOrWhiteSpace($value)) {
+            $missing += $name
+        }
+    }
+
+    if ($missing.Count -gt 0) {
+        throw "Missing required config value(s): $($missing -join ', '). Set these keys in '$PSScriptRoot\tz-bot.env'."
+    }
+}
+
+$script:BotConfig = Import-JsonConfigFile -Path "$PSScriptRoot\tz-bot.env"
+Assert-RequiredConfig -Config $script:BotConfig -Names @('X_EMU_USERNAME', 'X_EMU_TOKEN', 'DISCORD_WEBHOOK_URL')
+
+$script:XEmuUsername = [string]$script:BotConfig.X_EMU_USERNAME
+$script:XEmuToken = [string]$script:BotConfig.X_EMU_TOKEN
+$script:DiscordWebhookUrl = [string]$script:BotConfig.DISCORD_WEBHOOK_URL
+
 $d2rZoneIds = @(
     @(0, "None"),
     @(1, "Rogue Encampment"),
@@ -187,8 +239,8 @@ function GetNextQueryTime {
 
 function GetTzInfo {
     $headers = @{
-        'x-emu-username' = ''
-        'x-emu-token'    = ''
+        'x-emu-username' = $script:XEmuUsername
+        'x-emu-token'    = $script:XEmuToken
     }
     $response = Invoke-WebRequest -Uri https://d2emu.com/api/v1/tz -Headers $headers
     return $response.Content | ConvertFrom-Json
@@ -205,7 +257,7 @@ function NotifyDiscord {
 
     $message = CreateTzMessage -Prefix $Prefix -Zones $Zones -Immunities $Immunities -SuperUniques $SuperUniques
 
-    $webhook = "https://discord.com/api/webhooks/"
+    $webhook = $script:DiscordWebhookUrl
     $body = @{ 'content' = $message } | ConvertTo-Json -Compress
     Invoke-RestMethod -Uri $webhook -Method Post -Body $body -ContentType 'application/json'
 }
