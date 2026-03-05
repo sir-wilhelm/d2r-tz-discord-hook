@@ -254,11 +254,37 @@ function NotifyDiscord {
         [string[]]$Immunities,
         [string[]]$SuperUniques
     )
+    $title = if ($Prefix -eq "Current") { "Current Terror Zones" } else { "Next Terror Zones" }
+    $color = if ($Prefix -eq "Current") { 16711680 } else { 65280 } # Red for current, Green for next
 
-    $message = CreateTzMessage -Prefix $Prefix -Zones $Zones -Immunities $Immunities -SuperUniques $SuperUniques
+    $zoneLines = ($Zones | ForEach-Object { "- $_" }) -join "`n"
+    $immunitiesText = $Immunities -join ", "
+    $superUniquesText = ($SuperUniques | ForEach-Object { "- $_" }) -join "`n"
+
+    $embed = @{
+        title  = $title
+        color  = $color
+        fields = @(
+            @{
+                name   = "Zones"
+                value  = $zoneLines
+                inline = $false
+            },
+            @{
+                name   = "Immunities"
+                value  = $immunitiesText
+                inline = $true
+            },
+            @{
+                name   = "Superuniques"
+                value  = $superUniquesText
+                inline = $false
+            }
+        )
+    }
 
     $webhook = $script:DiscordWebhookUrl
-    $body = @{ 'content' = $message } | ConvertTo-Json -Compress
+    $body = @{ embeds = @($embed) } | ConvertTo-Json -Depth 6 -Compress
     Invoke-RestMethod -Uri $webhook -Method Post -Body $body -ContentType 'application/json'
 }
 
