@@ -211,8 +211,6 @@ $d2rAlertZoneIds = @(
     102, # "Durance of Hate 3"
     107, # "River of Flame"
     108, # "Chaos Sanctuary"
-    110, # "Bloody Foothills"
-    111, # "Frigid Highlands"
     121, # "Nihlathaks Temple"
     123, # "Halls of Pain"
     128, # "Worldstone Keep 1"
