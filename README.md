@@ -2,6 +2,10 @@
 
 PowerShell script that polls the **d2emu** Terror Zone API and optionally posts alerts to a **Discord** channel via webhook.
 
+Ex notifications:
+
+<img width="526" height="708" alt="image" src="https://github.com/user-attachments/assets/6c905a52-3aff-4eb8-a953-b2ec346e82fa" />
+
 ## What it does
 
 - Defines an “alert list” of zone IDs you care about (`$d2rAlertZoneIds`).
