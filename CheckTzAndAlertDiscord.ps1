@@ -391,5 +391,5 @@ do {
     }
 
     if ($RunOnce) { break }
-    Start-Sleep -Seconds ((GetNextQueryTime) - (Get-Date)).TotalSeconds
+    Start-Sleep -Seconds (((GetNextQueryTime) - (Get-Date)).TotalSeconds + 1)
 } while ($true)
