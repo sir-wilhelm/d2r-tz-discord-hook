@@ -1,6 +1,6 @@
 #crontab -e
-#run At minute 0, 5, 30, and 35 past every hour from 8 through 22
-#01,05,31,35 8-22 * * * pwsh -File /home/<username>/scripts/CheckTzAndAlertDiscord.ps1 -SendToDiscord -RunOnce
+#run at minute 0, 5, 30, and 35 past every hour from 8am through 9pm on Sun/Sat
+#00,05,30,35 8-21 * * Sun,Sat pwsh -File /home/<username>/scripts/CheckTzAndAlertDiscord.ps1 -SendToDiscord -RunOnce
 
 param(
     [switch]$DumpInfo,
@@ -223,16 +223,14 @@ $d2rAlertZoneIds = @(
 function GetNextQueryTime {
     $now = Get-Date
     $hourStart = $now.Date.AddHours($now.Hour)
-    $t01 = $hourStart.AddMinutes(1)
     $t05 = $hourStart.AddMinutes(5)
-    $t31 = $hourStart.AddMinutes(31)
+    $t30 = $hourStart.AddMinutes(30)
     $t35 = $hourStart.AddMinutes(35)
 
-    if ($now -lt $t01) { return $t01 }
     if ($now -lt $t05) { return $t05 }
-    if ($now -lt $t31) { return $t31 }
+    if ($now -lt $t30) { return $t30 }
     if ($now -lt $t35) { return $t35 }
-    return $t01.AddHours(1)
+    return $hourStart.AddHours(1)
 }
 
 function GetTzInfo {
@@ -317,7 +315,7 @@ function CreateTzMessage {
         return ""
     }
 
-    $prefixText = if ($Prefix -eq "Current") { "Current Terror Zones:" } else { "Next Terror Zones:" }
+    $prefixText = if ($Prefix -eq "$(Get-Date) Current") { "Current Terror Zones:" } else { "$(Get-Date) Next Terror Zones:" }
     return @"
 $prefixText
   $($Zones -join "`n  ")
@@ -352,9 +350,22 @@ if ($DumpInfo) {
 
 do {
     $now = Get-Date
-    $tzInfo = GetTzInfo
+    $tzInfoFile = "$PSScriptRoot\tzInfo.json"
 
     if ($now.Minute -le 01 -or ($now.Minute -ge 30 -and $now.Minute -le 31)) {
+        if (Test-Path -Path $tzInfoFile) {
+            $tzInfo = Get-Content -Path $tzInfoFile | ConvertFrom-Json
+            $tzInfo.current = $tzInfo.next
+            $tzInfo.current_immunities = $tzInfo.next_immunities
+            $tzInfo.current_superuniques = $tzInfo.next_superuniques
+            Remove-Item -Path $tzInfoFile -Force
+        }
+        else
+        {
+            Start-Sleep -Seconds 65
+            $tzInfo = GetTzInfo
+        }
+
         $zones = GetFilteredZoneNames -Zones $tzInfo.current
         if ($zones) {
             if ($SendToDiscord) {
@@ -367,8 +378,10 @@ do {
         }
     }
     else {
+        $tzInfo = GetTzInfo
         $zones = GetFilteredZoneNames -Zones $tzInfo.next
         if ($zones) {
+            $tzInfo | ConvertTo-Json | Out-File -FilePath $tzInfoFile -Force
             if ($SendToDiscord) {
                 NotifyDiscord -Prefix Next -Zones $zones -Immunities $tzInfo.next_immunities -SuperUniques $tzInfo.next_superuniques
             }
