@@ -4,12 +4,12 @@ PowerShell script that polls the **d2emu** Terror Zone API and optionally posts 
 
 Ex notifications:
 
-<img width="526" height="708" alt="image" src="https://github.com/user-attachments/assets/6c905a52-3aff-4eb8-a953-b2ec346e82fa" />
+<img width="527" height="634" alt="image" src="https://github.com/user-attachments/assets/7fb46a7b-1d3f-4cd0-8a4d-39b205c3a350" />
 
 ## What it does
 
 - Defines an “alert list” of zone IDs you care about (`$d2rAlertZoneIds`).
-- On a schedule (minute `01`, `05`, `31`, `35` of each hour), calls the d2emu API for terror zone info.
+- On a schedule (minute `00`, `05`, `30`, `35` of each hour), calls the d2emu API for terror zone info.
 - If any **current** __or__ **next** terror zone matches your alert list, it prints a message or (with `-SendToDiscord`) sends it to Discord.
 - With `-DumpInfo`, it prints/sends the **current** terror zone info ignoring the `$d2rAlertZoneIds` filter.
 
@@ -104,15 +104,15 @@ Examples:
 
 ## Scheduling
 
-The script calculates the next poll time via `GetNextQueryTime` (currently `:01`, `:05`, `:31`, and `:35` each hour).
+The script calculates the next poll time via `GetNextQueryTime` (currently `:00`, `:05`, `:30`, and `:35` each hour).
 
 Examples:
 
-- Linux `cron` (every hour 8–22 at minute 01, 05, 31, 35):
+- Linux `cron` (every hour 8am 9pm at minute 00, 05, 30, 35 Sat/Sun):
   ```
-  01,05,31,35 8-22 * * * pwsh -File /home/<user>/scripts/CheckTzAndAlertDiscord.ps1 -RunOnce -SendToDiscord
+  00,05,30,35 8-21 * * Sun,Sat pwsh -File /home/<username>/scripts/CheckTzAndAlertDiscord.ps1 -SendToDiscord -RunOnce
   ```
 
-- Windows: use **Task Scheduler** to run `pwsh.exe` with arguments like:
+- Windows: use **Task Scheduler** to run `pwsh.exe` with arguments like or run in console:
   - `-File "E:\src\d2r-tz-discord-hook\CheckTzAndAlertDiscord.ps1" -SendToDiscord`
   - Ensure the runtime is set to indefinitely so it does not get terminated.
