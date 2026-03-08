@@ -327,8 +327,6 @@ Superuniques: $($SuperUniques -join ", ")
 "@
 }
 
-if ($RunOnce) { Start-Transcript -Path "$PSScriptRoot\TzAlertLog.txt" -Force }
-
 if ($DumpInfo) {
     $tzInfo = GetTzInfo
     $tzInfo
@@ -395,5 +393,3 @@ do {
     if ($RunOnce) { break }
     Start-Sleep -Seconds ((GetNextQueryTime) - (Get-Date)).TotalSeconds
 } while ($true)
-
-if ($RunOnce) { Stop-Transcript }
