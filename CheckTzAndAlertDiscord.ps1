@@ -317,7 +317,7 @@ function CreateTzMessage {
 
     $prefixText = if ($Prefix -eq "Current") { "Current Terror Zones:" } else { "Next Terror Zones:" }
     return @"
-$(Get-Date) $prefixText
+$(Get-Date -Format G) $prefixText
   $($Zones -join "`n  ")
 
 Immunities: $($Immunities -join ", ")
