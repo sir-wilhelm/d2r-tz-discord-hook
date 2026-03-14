@@ -238,7 +238,7 @@ function GetTzInfo {
         'x-emu-username' = $script:XEmuUsername
         'x-emu-token'    = $script:XEmuToken
     }
-    $response = Invoke-WebRequest -Uri https://d2emu.com/api/v1/tz -Headers $headers
+    $response = Invoke-WebRequest -Uri https://d2emu.com/api/v1/tz -Headers $headers -UseBasicParsing
     return $response.Content | ConvertFrom-Json
 }
 
