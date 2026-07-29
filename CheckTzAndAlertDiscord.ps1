@@ -5,7 +5,8 @@
 param(
     [switch]$DumpInfo,
     [switch]$SendToDiscord,
-    [switch]$RunOnce
+    [switch]$RunOnce,
+    [switch]$DumpAllLoop
 )
 
 function Import-JsonConfigFile {
@@ -221,6 +222,10 @@ $d2rAlertZoneIds = @(
 )
 
 function GetNextQueryTime {
+    param(
+        [switch]$DumpAllLoop
+    )
+
     $now = Get-Date
     $hourStart = $now.Date.AddHours($now.Hour)
     $t05 = $hourStart.AddMinutes(5)
@@ -228,9 +233,15 @@ function GetNextQueryTime {
     $t35 = $hourStart.AddMinutes(35)
 
     if ($now -lt $t05) { return $t05 }
-    if ($now -lt $t30) { return $t30 }
+    if ($now -lt $t30 -and !$DumpAllLoop) { return $t30 }
     if ($now -lt $t35) { return $t35 }
-    return $hourStart.AddHours(1)
+
+    if($DumpAllLoop) {
+        return $t05.AddHours(1)
+    }
+    else {
+        return $hourStart.AddHours(1)
+    }
 }
 
 function GetTzInfo {
@@ -327,7 +338,7 @@ Superuniques: $($SuperUniques -join ", ")
 "@
 }
 
-if ($DumpInfo) {
+function DumpInfo {
     $tzInfo = GetTzInfo
     $tzInfo
     $zones = GetFilteredZoneNames -Zones $tzInfo.current -IgnoreFilter
@@ -343,6 +354,13 @@ if ($DumpInfo) {
         NotifyDiscord -Prefix Current -Zones $zones -Immunities $tzInfo.current_immunities -SuperUniques $tzInfo.current_superuniques
         NotifyDiscord -Prefix Next -Zones $nextZones -Immunities $tzInfo.next_immunities -SuperUniques $tzInfo.next_superuniques
     }
+}
+
+if ($DumpInfo -or $DumpAllLoop) {
+    do {
+        DumpInfo
+        Start-Sleep -Seconds (((GetNextQueryTime -DumpAllLoop) - (Get-Date)).TotalSeconds + 1)
+    } while ($DumpAllLoop)
     return
 }
 

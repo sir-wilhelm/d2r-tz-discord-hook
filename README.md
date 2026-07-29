@@ -102,6 +102,13 @@ Examples:
   pwsh -File .\CheckTzAndAlertDiscord.ps1 -RunOnce -SendToDiscord
   ```
 
+### DumpAllLoop
+
+Run continuously and ignores filters, dumping the Current TZ when it changes:
+```powershell
+pwsh -File .\CheckTzAndAlertDiscord.ps1 -DumpAllLoop
+```
+
 ## Scheduling
 
 The script calculates the next poll time via `GetNextQueryTime` (currently `:00`, `:05`, `:30`, and `:35` each hour).
