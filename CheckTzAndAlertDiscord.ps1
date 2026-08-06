@@ -222,10 +222,6 @@ $d2rAlertZoneIds = @(
 )
 
 function GetNextQueryTime {
-    param(
-        [switch]$DumpAllLoop
-    )
-
     $now = Get-Date
     $hourStart = $now.Date.AddHours($now.Hour)
     $t05 = $hourStart.AddMinutes(5)
@@ -233,15 +229,31 @@ function GetNextQueryTime {
     $t35 = $hourStart.AddMinutes(35)
 
     if ($now -lt $t05) { return $t05 }
-    if ($now -lt $t30 -and !$DumpAllLoop) { return $t30 }
+    if ($now -lt $t30) { return $t30 }
     if ($now -lt $t35) { return $t35 }
 
-    if($DumpAllLoop) {
-        return $t05.AddHours(1)
+    return $hourStart.AddHours(1)
+}
+
+function Test-IsTzRefreshWindow {
+    param([Parameter(Mandatory = $true)][datetime]$Time)
+
+    return $Time.Minute -le 1 -or ($Time.Minute -ge 30 -and $Time.Minute -le 31)
+}
+
+function Get-CachedCurrentTzInfo {
+    param([Parameter(Mandatory = $true)][string]$CachePath)
+
+    if ((Test-Path -Path $CachePath) -and (Get-Date).AddMinutes(-30) -lt (Get-Item -Path $CachePath).LastWriteTime) {
+        $tzInfo = Get-Content -Path $CachePath | ConvertFrom-Json
+        $tzInfo.current = $tzInfo.next
+        $tzInfo.current_immunities = $tzInfo.next_immunities
+        $tzInfo.current_superuniques = $tzInfo.next_superuniques
+        return $tzInfo
     }
-    else {
-        return $hourStart.AddHours(1)
-    }
+
+    Start-Sleep -Seconds 65
+    return GetTzInfo
 }
 
 function GetTzInfo {
@@ -339,27 +351,33 @@ Superuniques: $($SuperUniques -join ", ")
 }
 
 function DumpInfo {
-    $tzInfo = GetTzInfo
-    $tzInfo
-    $zones = GetFilteredZoneNames -Zones $tzInfo.current -IgnoreFilter
-    $tzCurrentMessage = CreateTzMessage -Prefix Current -Zones $zones -Immunities $tzInfo.current_immunities -SuperUniques $tzInfo.current_superuniques
+    $now = Get-Date
+    $tzInfoFile = "$PSScriptRoot\tzInfo.json"
+    if (Test-IsTzRefreshWindow -Time $now) {
+        $tzInfo = Get-CachedCurrentTzInfo -CachePath $tzInfoFile
 
-    $nextZones = GetFilteredZoneNames -Zones $tzInfo.next -IgnoreFilter
-    $tzNextMessage = CreateTzMessage -Prefix Next -Zones $nextZones -Immunities $tzInfo.next_immunities -SuperUniques $tzInfo.next_superuniques
+        $zones = GetFilteredZoneNames -Zones $tzInfo.current -IgnoreFilter
+        $tzCurrentMessage = CreateTzMessage -Prefix Current -Zones $zones -Immunities $tzInfo.current_immunities -SuperUniques $tzInfo.current_superuniques
+    }
+    else {
+        $tzInfo = GetTzInfo
+        $tzInfo | ConvertTo-Json | Out-File -FilePath $tzInfoFile -Force
+        $tzInfo
+        $zones = GetFilteredZoneNames -Zones $tzInfo.current -IgnoreFilter
+        $tzCurrentMessage = CreateTzMessage -Prefix Current -Zones $zones -Immunities $tzInfo.current_immunities -SuperUniques $tzInfo.current_superuniques
+
+        $nextZones = GetFilteredZoneNames -Zones $tzInfo.next -IgnoreFilter
+        $tzNextMessage = CreateTzMessage -Prefix Next -Zones $nextZones -Immunities $tzInfo.next_immunities -SuperUniques $tzInfo.next_superuniques
+    }
 
     Write-Host $tzCurrentMessage -ForegroundColor DarkRed
     Write-Host $tzNextMessage -ForegroundColor Green
-
-    if ($SendToDiscord) {
-        NotifyDiscord -Prefix Current -Zones $zones -Immunities $tzInfo.current_immunities -SuperUniques $tzInfo.current_superuniques
-        NotifyDiscord -Prefix Next -Zones $nextZones -Immunities $tzInfo.next_immunities -SuperUniques $tzInfo.next_superuniques
-    }
 }
 
 if ($DumpInfo -or $DumpAllLoop) {
     do {
         DumpInfo
-        Start-Sleep -Seconds (((GetNextQueryTime -DumpAllLoop) - (Get-Date)).TotalSeconds + 1)
+        Start-Sleep -Seconds (((GetNextQueryTime) - (Get-Date)).TotalSeconds + 1)
     } while ($DumpAllLoop)
     return
 }
@@ -368,19 +386,8 @@ do {
     $now = Get-Date
     $tzInfoFile = "$PSScriptRoot\tzInfo.json"
 
-    if ($now.Minute -le 01 -or ($now.Minute -ge 30 -and $now.Minute -le 31)) {
-        if (Test-Path -Path $tzInfoFile) {
-            $tzInfo = Get-Content -Path $tzInfoFile | ConvertFrom-Json
-            $tzInfo.current = $tzInfo.next
-            $tzInfo.current_immunities = $tzInfo.next_immunities
-            $tzInfo.current_superuniques = $tzInfo.next_superuniques
-            Remove-Item -Path $tzInfoFile -Force
-        }
-        else
-        {
-            Start-Sleep -Seconds 65
-            $tzInfo = GetTzInfo
-        }
+    if (Test-IsTzRefreshWindow -Time $now) {
+        $tzInfo = Get-CachedCurrentTzInfo -CachePath $tzInfoFile
 
         $zones = GetFilteredZoneNames -Zones $tzInfo.current
         if ($zones) {
