@@ -210,7 +210,6 @@ $d2rAlertZoneIds = @(
     100, # "Durance of Hate 1"
     101, # "Durance of Hate 2"
     102, # "Durance of Hate 3"
-    107, # "River of Flame"
     108, # "Chaos Sanctuary"
     121, # "Nihlathaks Temple"
     123, # "Halls of Pain"
